@@ -57,7 +57,7 @@ class Upload extends CI_Controller {
                         if ($result == TRUE) 
                         {
                                 $emailAddress = $this->input->post('emailAddress');
-                                $result = $this->login_database->read_user_information($emailAddress);
+                                $result = $this->login_database->get_user_info("emailAddress = '$emailAddress'");
                                 if ($result != false) 
                                 {
                                         $session_data = array(
@@ -80,12 +80,23 @@ class Upload extends CI_Controller {
                 }
         }
 
+        public function logout() 
+        {
+                // Remove session data
+                $sess_array = array(
+                        'emailAddress' => ''
+                );
+                $this->session->unset_userdata('logged_in', $sess_array);
+                $data['logout_message'] = 'Logout Successful';
+                $this->load->view('login_form', $data);
+        }
+        
         // list uploaded products
         public function list_products()
         {
                 $this->load->library('table');
                 
-                $this->load->view('list_products');                
+                $this->load->view('list_products');
         }
         
         // edit a product
@@ -97,6 +108,7 @@ class Upload extends CI_Controller {
                         $data = array(
                                 'error' => '',
                                 'edit' => '1',
+                                'id' => $id,
                                 'sellerName' => $result[0]->sellerName,
                                 'productName' => $result[0]->productName,
                                 'productBrandName' => $result[0]->productBrandName,
@@ -111,19 +123,19 @@ class Upload extends CI_Controller {
                 }
         }
         
-        public function logout() 
-        {
-                // Remove session data
-                $sess_array = array(
-                        'emailAddress' => ''
-                );
-                $this->session->unset_userdata('logged_in', $sess_array);
-                $data['logout_message'] = 'Logout Successful';
-                $this->load->view('login_form', $data);
-        }
-        
         public function do_upload()
         {
+                $admin = ($this->session->userdata['logged_in']['admin']);  // check if user is admin
+                
+                if ($this->input->post('id') !== '0')  // editing record
+                {
+                        $edit = '1';
+                }
+                else  // adding record
+                {
+                        $edit = '';
+                }
+                
                 // set upload form fields validation rules
                 $this->form_validation->set_rules('sellerName', 'Seller name', 'required');
                 $this->form_validation->set_rules('productName', 'Product name', 'required');
@@ -131,7 +143,22 @@ class Upload extends CI_Controller {
 
                 if ($this->form_validation->run() == FALSE)  // validation errors exist
                 {
-                        $this->load->view('upload_form', array('error' => '', 'edit' => ''));
+                        $this->load->view('upload_form', array('error' => '', 'edit' => $edit));
+                        return;
+                }
+                
+                if ($edit === '1')  // editing record                  
+                {
+                        $this->load->library('table');
+                
+                        $this->upload_model->set_product();  // update product record in DB
+                        
+                        if ($admin && $this->input->post('publish') == "Yes")
+                        {
+                                $this->send_publish_email();  // send email to uploader
+                        }
+                
+                        $this->load->view('list_products');
                         return;
                 }
                 
@@ -153,20 +180,20 @@ class Upload extends CI_Controller {
                 {
                         $data = array('upload_data' => $this->upload->data());  // upload product image to folder
                         $imageFileName = $this->upload->data('file_name');
-                        $this->upload_model->set_product($imageFileName);  // insert product info into DB                        
+                        $this->upload_model->set_product($imageFileName);  // insert product info into DB
                         $this->send_upload_email();  // send email to admin
 
                         $this->load->view('upload_success', $data);
                 }
         }
         
-        // send email to admin
+        // send new product email to admin
         public function send_upload_email()
         {
                 $name = ($this->session->userdata['logged_in']['name']);
                 $emailAddress = ($this->session->userdata['logged_in']['emailAddress']);
                 
-                $result = $this->login_database->get_admin_email();  // get admin user email address
+                $result = $this->login_database->get_user_info("admin = '1'");  // get admin user email address
                 if ($result != false)
                 {
                         $adminEmail = $result[0]->emailAddress;
@@ -174,8 +201,6 @@ class Upload extends CI_Controller {
                 
                 $this->email->from('louhelmdp@gmail.com', 'Product Uploader');
                 $this->email->to($adminEmail);
-                // $this->email->cc('another@another-example.com');
-                // $this->email->bcc('them@their-example.com');
                 
                 $message = "$name ($emailAddress) submitted a new product with the following details: " . 
                         "\n\n Seller name: " . $this->upload_model->input->post('sellerName') . 
@@ -183,6 +208,34 @@ class Upload extends CI_Controller {
                         "\n Product brand name: " . $this->upload_model->input->post('productBrandName');
 
                 $this->email->subject('New product uploaded');
+                $this->email->message($message);
+
+                $this->email->send();
+        }
+        
+        // send email to uploader of published product
+        public function send_publish_email()
+        {
+                $name = ($this->session->userdata['logged_in']['name']);
+                $emailAddress = ($this->session->userdata['logged_in']['emailAddress']);
+                
+                $id = $this->input->post('id');
+                
+                $result = $this->upload_model->get_product($id);  // get upload user email address
+                if ($result != false)
+                {
+                        $uploadEmail = $result[0]->emailAddress;
+                }
+                
+                $this->email->from('louhelmdp@gmail.com', 'Product Uploader');
+                $this->email->to($uploadEmail);
+                
+                $message = "$name ($emailAddress) published a product with the following details: " . 
+                        "\n\n Seller name: " . $this->upload_model->input->post('sellerName') . 
+                        "\n Product name: " . $this->upload_model->input->post('productName') . 
+                        "\n Product brand name: " . $this->upload_model->input->post('productBrandName');
+
+                $this->email->subject('Product published');
                 $this->email->message($message);
 
                 $this->email->send();

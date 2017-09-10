@@ -16,30 +16,7 @@
                     } 
     
                     $template = array(
-                        'table_open'            => '<table class="table table-bordered table-striped table-condensed">',
-
-                        'thead_open'            => '<thead>',
-                        'thead_close'           => '</thead>',
-
-                        'heading_row_start'     => '<tr>',
-                        'heading_row_end'       => '</tr>',
-                        'heading_cell_start'    => '<th>',
-                        'heading_cell_end'      => '</th>',
-
-                        'tbody_open'            => '<tbody>',
-                        'tbody_close'           => '</tbody>',
-
-                        'row_start'             => '<tr>',
-                        'row_end'               => '</tr>',
-                        'cell_start'            => '<td>',
-                        'cell_end'              => '</td>',
-
-                        'row_alt_start'         => '<tr>',
-                        'row_alt_end'           => '</tr>',
-                        'cell_alt_start'        => '<td>',
-                        'cell_alt_end'          => '</td>',
-
-                        'table_close'           => '</table>'
+                        'table_open' => '<table class="table table-bordered table-striped table-condensed">',
                     );
 
                     $this->table->set_template($template);
@@ -56,11 +33,13 @@
                         $result = $this->upload_model->get_products("emailAddress = '$emailAddress'");
                     }
 
+                    // add table rows
                     for ($i=0; $i<count($result); $i++)
                     {
                         $editLink = "<a href='" . base_url() . "index.php/upload/edit_product/" . $result[$i]->id . "'>Edit</a>";
+                        $editCell = array('data' => $editLink, 'align' => 'center');
                         
-                        $this->table->add_row($result[$i]->sellerName, $result[$i]->productName, $result[$i]->productBrandName, $result[$i]->publish, $editLink);
+                        $this->table->add_row($result[$i]->sellerName, $result[$i]->productName, $result[$i]->productBrandName, $result[$i]->publish, $editCell);
                     }
                     
                     echo $this->table->generate();

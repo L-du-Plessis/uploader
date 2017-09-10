@@ -23,6 +23,7 @@
     {
         $panelTitle = 'Upload Product Information';
         
+        $id = '0';
         $sellerName = '';
         $productName = '';
         $productBrandName = '';
@@ -112,9 +113,9 @@
                                 echo '<div class="row">';
                                 echo '<div class="col-sm-6">';
                                 echo '<label for="publish">Publish:</label>';
-                                echo '<select class="form-control" id="publish">' . 
-                                     '<option>No</option>' . 
-                                     '<option>Yes</option>' . 
+                                echo '<select class="form-control" id="publish" name="publish">' . 
+                                     '<option value="No" ' . set_select("publish", "No", $publish == "No" ? TRUE : FALSE) . '>No</option>' . 
+                                     '<option value="Yes" ' . set_select("publish", "Yes", $publish == "Yes" ? TRUE : FALSE) . '>Yes</option>' . 
                                      '</select>';
                                 echo '</div>';
                                 echo '<div class="col-sm-6">';
@@ -123,6 +124,7 @@
                             }
                         }
                     ?>
+                    <input type="hidden" id="id" name="id" value="<?php echo set_value('id', $id); ?>">
                 </div>
 
                 <div class="row">
@@ -134,7 +136,7 @@
                             }
                             else  // record being edited
                             {
-                                echo "<a href='" . base_url() . "index.php/upload/list_products' class='btn btn-success btn-block'>Save</a>";
+                                echo '<button type="submit" class="btn btn-success btn-block">Save</button>';
                             }
                         ?>
                     </div>
